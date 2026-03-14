@@ -9,6 +9,7 @@ A daily task journal with time tracking. Single-binary CLI tool backed by an enc
 - **Manual task entry** — log tasks with explicit start/end times or a flat duration
 - **Daily journal** — view all tasks for a given day with per-project totals
 - **Date-range reports** — aggregate time across projects over any date range
+- **PDF export** — generate PDF reports with `--pdf` or `--output path.pdf`
 - **Encrypted storage** — AES-256 encryption via SQLCipher, passphrase stored in your OS keychain
 - **Crash recovery** — a running clock survives unexpected process exits
 
@@ -29,7 +30,7 @@ The binary is at `target/release/vibe-clock`.
 | `VIBE_CLOCK_DB` | Path to the database file | `<data_dir>/vibe-clock/vibe-clock.db` |
 | `VIBE_CLOCK_KEY` | Encryption passphrase (bypasses keyring/prompt) | — |
 
-On first run, if no passphrase is found in the OS keyring or `VIBE_CLOCK_KEY`, the tool prompts you to enter one. It is then stored in the keyring for subsequent runs.
+On first run, if no passphrase is found in `VIBE_CLOCK_KEY` or the OS keyring, the tool prompts you to enter one. It is then stored in the keyring for subsequent runs.
 
 ## Usage
 
@@ -114,9 +115,18 @@ vibe-clock report --from 2026-02-01 --to 2026-02-28
 
 # Using shortcuts
 vibe-clock report --from 2026-01-01 --to today
+
+# Export as PDF (saved to current directory)
+vibe-clock report --from 2026-02-01 --to 2026-02-28 --pdf
+
+# Export PDF to a specific file
+vibe-clock report --from 2026-02-01 --to 2026-02-28 --output report.pdf
+
+# Export PDF to a directory (auto-generates filename)
+vibe-clock report --from 2026-02-01 --to 2026-02-28 --output /path/to/dir/
 ```
 
-Outputs tasks grouped by project with per-project and overall totals.
+Outputs tasks grouped by project with per-project and overall totals. When `--pdf` or `--output` is used, the terminal report is still printed alongside the PDF.
 
 ## Exit codes
 

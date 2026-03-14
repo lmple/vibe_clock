@@ -6,18 +6,17 @@ const KEYRING_USER: &str = "db-passphrase";
 /// Retrieve the database passphrase.
 ///
 /// Priority:
-/// 1. OS keyring (via keyring crate)
-/// 2. `VIBE_CLOCK_KEY` environment variable (stores to keyring if found)
+/// 1. `VIBE_CLOCK_KEY` environment variable (checked first — instant, non-blocking)
+/// 2. OS keyring (via keyring crate — may block on locked keyrings)
 /// 3. Terminal prompt (stores to keyring on first use)
 pub fn get_passphrase() -> Result<String> {
-    // Try keyring first
-    if let Ok(passphrase) = get_from_keyring() {
+    // Try environment variable first (non-blocking)
+    if let Ok(passphrase) = std::env::var("VIBE_CLOCK_KEY") {
         return Ok(passphrase);
     }
 
-    // Try environment variable
-    if let Ok(passphrase) = std::env::var("VIBE_CLOCK_KEY") {
-        store_in_keyring(&passphrase).ok();
+    // Try keyring
+    if let Ok(passphrase) = get_from_keyring() {
         return Ok(passphrase);
     }
 

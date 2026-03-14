@@ -44,9 +44,15 @@ pub enum Command {
         /// Start date (inclusive, YYYY-MM-DD or "today"/"yesterday")
         #[arg(long)]
         from: String,
-        /// End date (inclusive, YYYY-MM-DD or "today"/"yesterday")
+        /// End date (inclusive, YYYY-MM-DD or "today"/"yesterday"; defaults to same as --from)
         #[arg(long)]
-        to: String,
+        to: Option<String>,
+        /// Export report as PDF to the current directory
+        #[arg(long)]
+        pdf: bool,
+        /// Output path for PDF file (e.g., report.pdf or /path/to/dir/)
+        #[arg(long)]
+        output: Option<String>,
     },
 }
 

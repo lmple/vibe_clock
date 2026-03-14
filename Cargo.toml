@@ -12,6 +12,7 @@ crossterm = "0.28"
 dirs = "6"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 ratatui = "0.29"
+genpdfi = "0.2"
 rusqlite = { version = "0.32", features = ["bundled-sqlcipher-vendored-openssl"] }
 
 [dev-dependencies]

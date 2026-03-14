@@ -1,3 +1,5 @@
+use std::fs;
+
 use assert_cmd::Command;
 use predicates::prelude::*;
 use tempfile::TempDir;
@@ -110,4 +112,56 @@ fn clock_start_stop_records_task_entry() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Late work"));
+}
+
+/// T025: PDF write to read-only directory produces actionable error
+#[test]
+fn pdf_write_permission_error() {
+    let tmp = TempDir::new().unwrap();
+
+    vibe_clock(&tmp)
+        .args(["project", "add", "Acme"])
+        .assert()
+        .success();
+    vibe_clock(&tmp)
+        .args([
+            "task",
+            "add",
+            "Acme",
+            "Some work",
+            "--start",
+            "2026-02-25T09:00",
+            "--end",
+            "2026-02-25T10:00",
+        ])
+        .assert()
+        .success();
+
+    // Create a read-only directory
+    let readonly_dir = tmp.path().join("readonly");
+    fs::create_dir(&readonly_dir).unwrap();
+    let pdf_path = readonly_dir.join("report.pdf");
+    let mut perms = fs::metadata(&readonly_dir).unwrap().permissions();
+    perms.set_readonly(true);
+    fs::set_permissions(&readonly_dir, perms).unwrap();
+
+    vibe_clock(&tmp)
+        .args([
+            "report",
+            "--from",
+            "2026-02-25",
+            "--to",
+            "2026-02-25",
+            "--output",
+            pdf_path.to_str().unwrap(),
+        ])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("Could not create file"));
+
+    // Restore permissions for cleanup
+    let mut perms = fs::metadata(&readonly_dir).unwrap().permissions();
+    #[allow(clippy::permissions_set_readonly_false)]
+    perms.set_readonly(false);
+    fs::set_permissions(&readonly_dir, perms).unwrap();
 }
