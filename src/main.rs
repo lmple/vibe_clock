@@ -46,8 +46,13 @@ fn run(cli: Cli) -> Result<(), AppError> {
         cli::Command::Journal { date } => {
             cli::journal::handle_journal(&db, date.as_deref())?;
         }
-        cli::Command::Report { from, to } => {
-            cli::report::handle_report(&db, &from, &to)?;
+        cli::Command::Report {
+            from,
+            to,
+            pdf,
+            output,
+        } => {
+            cli::report::handle_report(&db, &from, to.as_deref(), pdf, output.as_deref())?;
         }
     }
 

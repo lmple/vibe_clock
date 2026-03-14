@@ -1,5 +1,6 @@
 pub mod clock;
 pub mod journal;
+pub mod pdf;
 pub mod project;
 pub mod report;
 pub mod task;

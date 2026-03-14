@@ -1,17 +1,29 @@
+use std::path::PathBuf;
+
 use crate::db::Database;
 use crate::error::AppError;
 use crate::formatting::{self, format_duration};
-use crate::services::report;
+use crate::services::{pdf, report};
 
-pub fn handle_report(db: &Database, from: &str, to: &str) -> Result<(), AppError> {
+pub fn handle_report(
+    db: &Database,
+    from: &str,
+    to: Option<&str>,
+    pdf_flag: bool,
+    output: Option<&str>,
+) -> Result<(), AppError> {
     let from_date = formatting::parse_date(from).map_err(|e| AppError::UserError(e.to_string()))?;
-    let to_date = formatting::parse_date(to).map_err(|e| AppError::UserError(e.to_string()))?;
+    // Default to same date as from if to is not provided
+    let to_str = to.unwrap_or(from);
+    let to_date = formatting::parse_date(to_str).map_err(|e| AppError::UserError(e.to_string()))?;
 
     if from_date > to_date {
         return Err(AppError::UserError(
             "--from date must be before or equal to --to date.".to_string(),
         ));
     }
+
+    let pdf_path = pdf::resolve_pdf_path(output, pdf_flag, from_date, to_date)?;
 
     let report = report::generate_report(db, from_date, to_date)?;
 
@@ -24,6 +36,7 @@ pub fn handle_report(db: &Database, from: &str, to: &str) -> Result<(), AppError
         return Ok(());
     }
 
+    // Print terminal report
     println!(
         "Report: {} to {}",
         from_date.format("%Y-%m-%d"),
@@ -75,6 +88,19 @@ pub fn handle_report(db: &Database, from: &str, to: &str) -> Result<(), AppError
     }
 
     println!("Grand Total: {}", format_duration(report.grand_total));
+
+    // Generate PDF if requested
+    if let Some(path) = pdf_path {
+        let abs_path = if path.is_absolute() {
+            path
+        } else {
+            std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(&path)
+        };
+        pdf::render_pdf(&report, &abs_path)?;
+        println!("PDF report saved to {}", abs_path.display());
+    }
 
     Ok(())
 }
