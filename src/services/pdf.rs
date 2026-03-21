@@ -72,7 +72,6 @@ pub fn render_pdf(report: &Report, output_path: &Path) -> Result<(), AppError> {
         false, false, false,
     ));
 
-    // Header row for project summary
     let header_row = project_table.row();
     let header_row = header_row
         .element(Text::new("Project").styled(Style::new().bold()))
@@ -81,15 +80,14 @@ pub fn render_pdf(report: &Report, output_path: &Path) -> Result<(), AppError> {
         .push()
         .map_err(|e| AppError::SystemError(format!("Failed to add table header: {e}")))?;
 
-    // Sort projects alphabetically
-    let mut sorted_projects: Vec<_> = report.project_sections.iter().collect();
-    sorted_projects.sort_by(|a, b| a.name.cmp(&b.name));
+    let mut sorted_summaries: Vec<_> = report.project_summaries.iter().collect();
+    sorted_summaries.sort_by(|a, b| a.name.cmp(&b.name));
 
-    for section in &sorted_projects {
+    for summary in &sorted_summaries {
         let row = project_table.row();
         let row = row
-            .element(Text::new(section.name.clone()))
-            .element(Text::new(format_duration(section.total)));
+            .element(Text::new(summary.name.clone()))
+            .element(Text::new(format_duration(summary.total)));
         row.push()
             .map_err(|e| AppError::SystemError(format!("Failed to add table row: {e}")))?;
     }
@@ -103,28 +101,10 @@ pub fn render_pdf(report: &Report, output_path: &Path) -> Result<(), AppError> {
     doc.push(detail_heading);
     doc.push(genpdfi::elements::Break::new(0.5));
 
-    // Collect all tasks and group by date
-    use std::collections::BTreeMap;
-    let mut tasks_by_date: BTreeMap<String, Vec<_>> = BTreeMap::new();
-
-    for section in &report.project_sections {
-        for task in &section.entries {
-            let date = task
-                .start_time
-                .map(|t| t.format("%Y-%m-%d").to_string())
-                .unwrap_or_else(|| task.created_at.format("%Y-%m-%d").to_string());
-
-            tasks_by_date
-                .entry(date)
-                .or_insert_with(Vec::new)
-                .push((task, &section.name));
-        }
-    }
-
-    // Render each date chronologically
-    for (date, tasks) in tasks_by_date {
+    for section in &report.daily_sections {
+        let date_str = section.date.format("%Y-%m-%d").to_string();
         let mut date_heading = Paragraph::new("");
-        date_heading.push(bold_string(&date));
+        date_heading.push(bold_string(&date_str));
         doc.push(date_heading);
 
         let mut table = TableLayout::new(vec![1, 3, 2, 1, 1, 1]);
@@ -132,7 +112,6 @@ pub fn render_pdf(report: &Report, output_path: &Path) -> Result<(), AppError> {
             false, false, false,
         ));
 
-        // Header row for daily detail
         let header_row = table.row();
         let header_row = header_row
             .element(Text::new("ID").styled(Style::new().bold()))
@@ -145,31 +124,27 @@ pub fn render_pdf(report: &Report, output_path: &Path) -> Result<(), AppError> {
             .push()
             .map_err(|e| AppError::SystemError(format!("Failed to add table header: {e}")))?;
 
-        for (task, project_name) in tasks {
-            let start = task
+        for entry in &section.entries {
+            let start = entry
+                .task
                 .start_time
                 .map(|t| t.format("%H:%M").to_string())
                 .unwrap_or_else(|| "-".to_string());
 
-            let end = task
+            let end = entry
+                .task
                 .end_time
                 .map(|t| t.format("%H:%M").to_string())
                 .unwrap_or_else(|| "-".to_string());
 
-            let desc = if task.description.len() > 35 {
-                format!("{}...", &task.description[..32])
-            } else {
-                task.description.clone()
-            };
-
             let row = table.row();
             let row = row
-                .element(Text::new(task.id.to_string()))
-                .element(Text::new(desc))
-                .element(Text::new(project_name.to_string()))
+                .element(Text::new(entry.task.id.to_string()))
+                .element(Paragraph::new(entry.task.description.clone()))
+                .element(Text::new(entry.project_name.clone()))
                 .element(Text::new(start))
                 .element(Text::new(end))
-                .element(Text::new(format_duration(task.duration_min)));
+                .element(Text::new(format_duration(entry.task.duration_min)));
             row.push()
                 .map_err(|e| AppError::SystemError(format!("Failed to add table row: {e}")))?;
         }
@@ -217,7 +192,6 @@ pub fn resolve_pdf_path(
     from: NaiveDate,
     to: NaiveDate,
 ) -> Result<Option<PathBuf>, AppError> {
-    // Use simpler filename for single-date reports
     let auto_name = if from == to {
         format!("report-{}.pdf", from.format("%Y-%m-%d"))
     } else {
@@ -233,11 +207,9 @@ pub fn resolve_pdf_path(
         let resolved = if path.extension().is_some_and(|ext| ext == "pdf") {
             path
         } else {
-            // Treat as directory
             path.join(&auto_name)
         };
 
-        // Validate parent directory exists
         if let Some(parent) = resolved.parent() {
             if !parent.as_os_str().is_empty() && !parent.exists() {
                 return Err(AppError::UserError(format!(

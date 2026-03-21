@@ -80,7 +80,7 @@ fn generates_report_grouped_by_project() {
         .success()
         .stdout(predicate::str::contains("Acme"))
         .stdout(predicate::str::contains("Beta"))
-        .stdout(predicate::str::contains("Grand Total"));
+        .stdout(predicate::str::contains("TOTAL"));
 }
 
 #[test]
@@ -474,4 +474,299 @@ fn report_single_date_terminal() {
         .collect();
 
     assert_eq!(entries.len(), 0, "Should not create PDF without --pdf flag");
+}
+
+// --- Two-Part Layout Tests (US1: Project Summary Table) ---
+
+#[test]
+fn report_shows_project_summary_table() {
+    let tmp = TempDir::new().unwrap();
+    setup_with_dated_tasks(&tmp);
+
+    let output = vibe_clock(&tmp)
+        .args(["report", "--from", "2026-02-25", "--to", "2026-02-26"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+
+    // Summary section must appear
+    assert!(
+        stdout.contains("Project Summary"),
+        "missing 'Project Summary' heading"
+    );
+    assert!(stdout.contains("Acme"), "missing project Acme in summary");
+    assert!(stdout.contains("Beta"), "missing project Beta in summary");
+    assert!(stdout.contains("TOTAL"), "missing TOTAL row in summary");
+
+    // Summary section must come before any date section heading.
+    // The date "2026-02-25" also appears in the report header line, so we look for the
+    // per-day section heading which appears as a standalone line: "\n2026-02-25\n".
+    let summary_pos = stdout.find("Project Summary").unwrap();
+    let section_heading = "\n2026-02-25\n";
+    let date_section_pos = stdout
+        .find(section_heading)
+        .expect("per-day section heading '2026-02-25' not found");
+    assert!(
+        summary_pos < date_section_pos,
+        "Project Summary must appear before per-day sections"
+    );
+}
+
+#[test]
+fn report_shows_grand_total_in_summary() {
+    let tmp = TempDir::new().unwrap();
+    setup_with_dated_tasks(&tmp);
+
+    // Acme: Day 1 (2h) + Day 2 (1h 30m) = 3h 30m; Beta: 1h; Grand total: 4h 30m
+    vibe_clock(&tmp)
+        .args(["report", "--from", "2026-02-25", "--to", "2026-02-26"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("4h 30m"));
+}
+
+#[test]
+fn report_single_project_shows_summary_and_total() {
+    let tmp = TempDir::new().unwrap();
+
+    vibe_clock(&tmp)
+        .args(["project", "add", "Solo"])
+        .assert()
+        .success();
+    vibe_clock(&tmp)
+        .args([
+            "task",
+            "add",
+            "Solo",
+            "Only task",
+            "--start",
+            "09:00",
+            "--end",
+            "10:30",
+            "--date",
+            "2026-03-01",
+        ])
+        .assert()
+        .success();
+
+    let output = vibe_clock(&tmp)
+        .args(["report", "--from", "2026-03-01"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+
+    assert!(
+        stdout.contains("Solo"),
+        "project name must appear in summary"
+    );
+    assert!(stdout.contains("TOTAL"), "TOTAL row must appear");
+    assert!(stdout.contains("1h 30m"), "duration must appear correctly");
+}
+
+// --- Two-Part Layout Tests (US2: Per-Day Task Breakdown) ---
+
+#[test]
+fn report_shows_per_day_sections() {
+    let tmp = TempDir::new().unwrap();
+    setup_with_dated_tasks(&tmp);
+
+    vibe_clock(&tmp)
+        .args(["report", "--from", "2026-02-25", "--to", "2026-02-26"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("2026-02-25"))
+        .stdout(predicate::str::contains("2026-02-26"));
+}
+
+#[test]
+fn report_shows_tasks_in_date_ascending_order() {
+    let tmp = TempDir::new().unwrap();
+    setup_with_dated_tasks(&tmp);
+
+    let output = vibe_clock(&tmp)
+        .args(["report", "--from", "2026-02-25", "--to", "2026-02-26"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+
+    let pos_25 = stdout.find("2026-02-25").unwrap();
+    let pos_26 = stdout.find("2026-02-26").unwrap();
+    assert!(
+        pos_25 < pos_26,
+        "2026-02-25 section must appear before 2026-02-26 section"
+    );
+}
+
+#[test]
+fn report_no_truncation_long_description() {
+    let tmp = TempDir::new().unwrap();
+
+    vibe_clock(&tmp)
+        .args(["project", "add", "Acme"])
+        .assert()
+        .success();
+
+    let long_desc = "This is a very long task description that exceeds thirty characters easily";
+    vibe_clock(&tmp)
+        .args([
+            "task",
+            "add",
+            "Acme",
+            long_desc,
+            "--start",
+            "09:00",
+            "--end",
+            "10:00",
+            "--date",
+            "2026-03-10",
+        ])
+        .assert()
+        .success();
+
+    let output = vibe_clock(&tmp)
+        .args(["report", "--from", "2026-03-10"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+
+    // Full description must appear (no "...")
+    assert!(
+        stdout.contains("This is a very long task description"),
+        "full description must appear in output"
+    );
+    assert!(
+        !stdout.contains("..."),
+        "description must not be truncated with '...'"
+    );
+}
+
+#[test]
+fn report_dash_for_tasks_with_no_start_end() {
+    let tmp = TempDir::new().unwrap();
+
+    vibe_clock(&tmp)
+        .args(["project", "add", "Acme"])
+        .assert()
+        .success();
+    vibe_clock(&tmp)
+        .args([
+            "task",
+            "add",
+            "Acme",
+            "Duration only task",
+            "--duration",
+            "45m",
+            "--date",
+            "2026-03-05",
+        ])
+        .assert()
+        .success();
+
+    let output = vibe_clock(&tmp)
+        .args(["report", "--from", "2026-03-05"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+
+    assert!(stdout.contains("Duration only task"), "task must appear");
+    assert!(
+        stdout.contains('-'),
+        "dash must appear for missing start/end"
+    );
+}
+
+#[test]
+fn report_empty_days_omitted() {
+    let tmp = TempDir::new().unwrap();
+    setup_with_dated_tasks(&tmp);
+
+    // 2026-02-27 has no tasks
+    let output = vibe_clock(&tmp)
+        .args(["report", "--from", "2026-02-25", "--to", "2026-02-27"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+
+    // "2026-02-27" appears in the report header ("Report: 2026-02-25 to 2026-02-27"),
+    // but must NOT appear as a per-day section heading (standalone line).
+    assert!(
+        !stdout.contains("\n2026-02-27\n"),
+        "2026-02-27 has no tasks and must not appear as a section heading"
+    );
+}
+
+#[test]
+fn report_tasks_ordered_by_start_time_within_day() {
+    let tmp = TempDir::new().unwrap();
+
+    vibe_clock(&tmp)
+        .args(["project", "add", "Acme"])
+        .assert()
+        .success();
+
+    // Add later task first, earlier task second
+    vibe_clock(&tmp)
+        .args([
+            "task",
+            "add",
+            "Acme",
+            "Afternoon task",
+            "--start",
+            "14:00",
+            "--end",
+            "15:00",
+            "--date",
+            "2026-03-15",
+        ])
+        .assert()
+        .success();
+    vibe_clock(&tmp)
+        .args([
+            "task",
+            "add",
+            "Acme",
+            "Morning task",
+            "--start",
+            "09:00",
+            "--end",
+            "10:00",
+            "--date",
+            "2026-03-15",
+        ])
+        .assert()
+        .success();
+
+    let output = vibe_clock(&tmp)
+        .args(["report", "--from", "2026-03-15"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+
+    let morning_pos = stdout.find("Morning task").unwrap();
+    let afternoon_pos = stdout.find("Afternoon task").unwrap();
+    assert!(
+        morning_pos < afternoon_pos,
+        "Morning task (09:00) must appear before Afternoon task (14:00)"
+    );
 }
