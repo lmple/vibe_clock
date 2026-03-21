@@ -27,29 +27,19 @@ pub fn parse_date(input: &str) -> Result<NaiveDate> {
     }
 }
 
-/// Parse a time string into a NaiveDateTime.
+/// Parse a time string into a NaiveDateTime on the given date.
 ///
 /// Supported formats:
-/// - ISO 8601 datetime (e.g., "2026-02-28T14:30")
-/// - HH:MM (assumes today's date)
-pub fn parse_time(input: &str) -> Result<NaiveDateTime> {
+/// - H:MM or HH:MM (24-hour clock; the date is supplied by the caller)
+pub fn parse_time(input: &str, date: NaiveDate) -> Result<NaiveDateTime> {
     let input = input.trim();
 
-    // Try full ISO 8601 datetime first
-    if let Ok(dt) = NaiveDateTime::parse_from_str(input, "%Y-%m-%dT%H:%M:%S") {
-        return Ok(dt);
-    }
-    if let Ok(dt) = NaiveDateTime::parse_from_str(input, "%Y-%m-%dT%H:%M") {
-        return Ok(dt);
+    // Accept both single-digit and zero-padded hours (e.g., "9:00" and "09:00")
+    if let Ok(time) = NaiveTime::parse_from_str(input, "%-H:%M") {
+        return Ok(NaiveDateTime::new(date, time));
     }
 
-    // Try HH:MM (assumes today)
-    if let Ok(time) = NaiveTime::parse_from_str(input, "%H:%M") {
-        let today = Local::now().date_naive();
-        return Ok(NaiveDateTime::new(today, time));
-    }
-
-    bail!("Invalid time: '{input}'. Use YYYY-MM-DDTHH:MM or HH:MM")
+    bail!("Invalid time: '{input}'. Use HH:MM format (e.g., 9:00 or 14:30)")
 }
 
 /// Format a table of task entries as plain text with aligned columns.
@@ -147,25 +137,30 @@ mod tests {
 
     #[test]
     fn parse_time_hhmm() {
-        let result = parse_time("14:30").unwrap();
+        let date = NaiveDate::from_ymd_opt(2026, 3, 21).unwrap();
+        let result = parse_time("14:30", date).unwrap();
+        assert_eq!(result.date(), date);
         assert_eq!(result.time(), NaiveTime::from_hms_opt(14, 30, 0).unwrap());
     }
 
     #[test]
-    fn parse_time_iso_datetime() {
-        let result = parse_time("2026-01-15T09:00").unwrap();
-        assert_eq!(
-            result,
-            NaiveDate::from_ymd_opt(2026, 1, 15)
-                .unwrap()
-                .and_hms_opt(9, 0, 0)
-                .unwrap()
-        );
+    fn parse_time_single_digit_hour() {
+        let date = NaiveDate::from_ymd_opt(2026, 3, 21).unwrap();
+        let result = parse_time("9:00", date).unwrap();
+        assert_eq!(result.date(), date);
+        assert_eq!(result.time(), NaiveTime::from_hms_opt(9, 0, 0).unwrap());
+    }
+
+    #[test]
+    fn parse_time_rejects_iso_datetime() {
+        let date = NaiveDate::from_ymd_opt(2026, 3, 21).unwrap();
+        assert!(parse_time("2026-01-15T09:00", date).is_err());
     }
 
     #[test]
     fn parse_time_invalid() {
-        assert!(parse_time("nope").is_err());
+        let date = NaiveDate::from_ymd_opt(2026, 3, 21).unwrap();
+        assert!(parse_time("nope", date).is_err());
     }
 
     #[test]

@@ -42,6 +42,7 @@ pub fn handle_task(db: &Database, clock: &dyn Clock, action: TaskAction) -> Resu
             start,
             end,
             duration,
+            date,
         } => {
             task::edit_task(
                 db,
@@ -51,6 +52,7 @@ pub fn handle_task(db: &Database, clock: &dyn Clock, action: TaskAction) -> Resu
                 start.as_deref(),
                 end.as_deref(),
                 duration.as_deref(),
+                date.as_deref(),
                 clock,
             )?;
             println!("Task {id} updated.");

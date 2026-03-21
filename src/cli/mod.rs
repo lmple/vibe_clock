@@ -106,16 +106,16 @@ pub enum TaskAction {
         project: String,
         /// Task description
         description: String,
-        /// Start time (YYYY-MM-DDTHH:MM or HH:MM)
+        /// Start time (HH:MM, 24-hour clock, e.g., 9:00 or 14:30)
         #[arg(long)]
         start: Option<String>,
-        /// End time (YYYY-MM-DDTHH:MM or HH:MM)
+        /// End time (HH:MM, 24-hour clock, e.g., 17:30)
         #[arg(long)]
         end: Option<String>,
-        /// Duration in minutes (alternative to start/end)
+        /// Duration (e.g., 1h30m, 45m, 2h, or 90 for minutes)
         #[arg(long)]
         duration: Option<String>,
-        /// Date for the entry (defaults to today, used with --duration)
+        /// Date for the entry (YYYY-MM-DD, 'today', or 'yesterday'; defaults to today)
         #[arg(long)]
         date: Option<String>,
     },
@@ -129,15 +129,18 @@ pub enum TaskAction {
         /// Move to a different project (name or ID)
         #[arg(long)]
         project: Option<String>,
-        /// New start time
+        /// New start time (HH:MM, 24-hour clock, e.g., 9:00 or 14:30)
         #[arg(long)]
         start: Option<String>,
-        /// New end time
+        /// New end time (HH:MM, 24-hour clock)
         #[arg(long)]
         end: Option<String>,
-        /// New duration in minutes
+        /// New duration (e.g., 1h30m, 45m, 2h, or 90 for minutes)
         #[arg(long)]
         duration: Option<String>,
+        /// Move task to a different date (YYYY-MM-DD, 'today', or 'yesterday')
+        #[arg(long)]
+        date: Option<String>,
     },
     /// Delete a task entry
     Delete {

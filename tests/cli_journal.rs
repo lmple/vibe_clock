@@ -67,7 +67,7 @@ fn shows_tasks_for_specific_date() {
         .assert()
         .success();
 
-    // Add task with specific start/end date
+    // Add task with specific date using --date flag
     vibe_clock(&tmp)
         .args([
             "task",
@@ -75,9 +75,11 @@ fn shows_tasks_for_specific_date() {
             "Acme",
             "Old task",
             "--start",
-            "2026-02-25T09:00",
+            "09:00",
             "--end",
-            "2026-02-25T10:00",
+            "10:00",
+            "--date",
+            "2026-02-25",
         ])
         .assert()
         .success();

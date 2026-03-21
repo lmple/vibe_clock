@@ -24,8 +24,22 @@ This document describes changes to existing CLI command contracts. Only modified
 | `--start` | New start time | New start time (HH:MM, 24-hour clock) |
 | `--end` | New end time | New end time (HH:MM, 24-hour clock) |
 | `--duration` | New duration in minutes | New duration (e.g., 1h30m, 45m, 2h, or 90 for minutes) |
+| `--date` | *(not present)* | Move task to a different date (YYYY-MM-DD, `today`, or `yesterday`) |
 
-**Behavioral change**: When editing start/end times, the time is applied to the existing task's date.
+**Behavioral changes**:
+- When `--date` is provided with `--start`/`--end`, the new times are applied on that date.
+- When only `--date` is provided (no `--start`/`--end`), the existing start/end times are moved to the new date (timestamps updated, duration preserved).
+- When editing start/end times without `--date`, the time is applied to the existing task's date (unchanged from before).
+
+## `--date` Accepted Values (task add and task edit)
+
+Matches `journal` shortcut behavior (clarification 2026-03-21):
+
+| Value | Resolves to |
+|-------|-------------|
+| `YYYY-MM-DD` | The specified date |
+| `today` | Current calendar day |
+| `yesterday` | Previous calendar day |
 
 ## Error Messages
 

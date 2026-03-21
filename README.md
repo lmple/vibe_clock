@@ -69,15 +69,15 @@ If the process exits while a clock is running, the next invocation detects it an
 ### Manual task entry
 
 ```
-# Log with start and end times
+# Log with start and end times (HH:MM, 24-hour clock)
 vibe-clock task add "Acme Corp" "Code review" --start 10:00 --end 11:30
 
-# Log with full datetime
-vibe-clock task add "Acme Corp" "Standup" --start 2026-02-28T09:00 --end 2026-02-28T09:15
+# Log for a specific date (defaults to today)
+vibe-clock task add "Acme Corp" "Standup" --start 09:00 --end 09:15 --date 2026-02-28
 
-# Log with a flat duration (minutes, or "1h 30m" format)
+# Log with a flat duration
 vibe-clock task add "Acme Corp" "Email triage" --duration 45
-vibe-clock task add "Acme Corp" "Planning" --duration "1h 30m"
+vibe-clock task add "Acme Corp" "Planning" --duration 1h30m
 ```
 
 ### Edit / delete tasks
@@ -86,6 +86,10 @@ vibe-clock task add "Acme Corp" "Planning" --duration "1h 30m"
 # Edit a task entry (by ID)
 vibe-clock task edit 1 --description "Updated description"
 vibe-clock task edit 1 --project "Other Project" --start 09:00 --end 10:00
+
+# Move a task to a different date
+vibe-clock task edit 1 --date yesterday
+vibe-clock task edit 1 --date 2026-02-28
 
 # Delete a task entry
 vibe-clock task delete 1

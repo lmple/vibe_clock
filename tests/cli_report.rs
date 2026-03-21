@@ -29,9 +29,11 @@ fn setup_with_dated_tasks(tmp: &TempDir) {
             "Acme",
             "Day 1 work",
             "--start",
-            "2026-02-25T09:00",
+            "09:00",
             "--end",
-            "2026-02-25T11:00",
+            "11:00",
+            "--date",
+            "2026-02-25",
         ])
         .assert()
         .success();
@@ -42,9 +44,11 @@ fn setup_with_dated_tasks(tmp: &TempDir) {
             "Acme",
             "Day 2 work",
             "--start",
-            "2026-02-26T09:00",
+            "09:00",
             "--end",
-            "2026-02-26T10:30",
+            "10:30",
+            "--date",
+            "2026-02-26",
         ])
         .assert()
         .success();
@@ -55,9 +59,11 @@ fn setup_with_dated_tasks(tmp: &TempDir) {
             "Beta",
             "Beta task",
             "--start",
-            "2026-02-25T14:00",
+            "14:00",
             "--end",
-            "2026-02-25T15:00",
+            "15:00",
+            "--date",
+            "2026-02-25",
         ])
         .assert()
         .success();
