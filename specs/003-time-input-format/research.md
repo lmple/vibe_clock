@@ -2,6 +2,18 @@
 
 **Branch**: `003-time-input-format` | **Date**: 2026-02-28
 
+## Bug Root Cause: `--date` Ignored in `add_task()`
+
+**Found**: 2026-03-21 during plan phase code review.
+
+**Location**: `src/services/task.rs:15` — parameter declared as `_date: Option<&str>`
+
+The leading underscore is Rust convention for intentionally unused variables. The `--date` argument is accepted by clap and passed to `add_task()`, but never read. `parse_time()` calls `Local::now().date_naive()` internally when only `HH:MM` is given, so all tasks are recorded with today's date regardless of `--date`.
+
+**Fix (Decision 3 below)**: The `parse_time()` signature change forces the date to be passed in explicitly, making the bug impossible to re-introduce.
+
+---
+
 ## Decision 1: Single-Digit Hour Parsing
 
 **Decision**: Use chrono's `%-H:%M` format specifier.

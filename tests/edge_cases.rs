@@ -130,9 +130,11 @@ fn pdf_write_permission_error() {
             "Acme",
             "Some work",
             "--start",
-            "2026-02-25T09:00",
+            "09:00",
             "--end",
-            "2026-02-25T10:00",
+            "10:00",
+            "--date",
+            "2026-02-25",
         ])
         .assert()
         .success();

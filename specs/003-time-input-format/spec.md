@@ -12,6 +12,11 @@
 - Q: Does this feature remove ISO 8601 full datetime support for `--start`/`--end`? → A: Yes. Remove ISO 8601 datetime; only accept `HH:MM`. Use `--date` for the day.
 - Q: Should single-digit hours be accepted (e.g., `9:00` vs strict `09:00`)? → A: Yes. Accept both `H:MM` and `HH:MM`.
 
+### Session 2026-03-21
+
+- Q: Should the space-separated duration format (`"1h 30m"`) be kept for backward compatibility alongside the compact form (`1h30m`)? → A: No. Drop it — only `1h30m` (no spaces); README is updated to match.
+- Q: Should `--date` on `task add`/`task edit` accept shortcuts (`today`, `yesterday`) in addition to `YYYY-MM-DD`? → A: Yes. Match `journal` behavior: accept `YYYY-MM-DD`, `today`, and `yesterday`.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Enter Start and End Times as Clock Times (Priority: P1)
@@ -79,14 +84,14 @@ As a user, I want durations displayed in the same human-friendly format (e.g., `
 ### Functional Requirements
 
 - **FR-001**: System MUST accept start and end times in `H:MM` or `HH:MM` format (24-hour clock), representing a time of day. Both single-digit and zero-padded hours are valid (e.g., `9:00` and `09:00`). ISO 8601 full datetime strings are no longer accepted for `--start`/`--end`.
-- **FR-002**: System MUST accept durations in the following compact formats (no spaces): `Xh`, `Ym`, `XhYm`, `XhY` (trailing `m` is optional), or a plain number (interpreted as minutes). Spaced input (e.g., `1h 30m`) is not supported.
+- **FR-002**: System MUST accept durations in the following compact formats (no spaces): `Xh`, `Ym`, `XhYm`, `XhY` (trailing `m` is optional), or a plain number (interpreted as minutes). Spaced input (e.g., `"1h 30m"`) is explicitly not supported and must be rejected with an error. The README must be updated to remove the space-separated duration example.
 - **FR-003**: System MUST reject start/end times that are not in valid `H:MM` or `HH:MM` format with an error message showing the expected format.
 - **FR-004**: System MUST reject durations that are zero or negative with an error message.
 - **FR-005**: System MUST reject duration strings that do not match any accepted format with an error message listing accepted formats.
 - **FR-006**: System MUST normalize durations with minutes >= 60 (e.g., `1h90m` becomes 150 minutes, displayed as `2h 30m`).
 - **FR-007**: System MUST display all durations in `Xh Ym` format, omitting the hours component when it is zero (e.g., `45m`) and omitting the minutes component when it is zero (e.g., `2h`).
 - **FR-008**: System MUST apply the same time input formats to both the add and edit commands for task entries.
-- **FR-009**: Start and end times MUST be interpreted as times on the task's date (today by default, or the date specified via `--date`).
+- **FR-009**: Start and end times MUST be interpreted as times on the task's date (today by default, or the date specified via `--date`). The `--date` option MUST accept `YYYY-MM-DD`, `today`, and `yesterday` (matching `journal` behavior).
 - **FR-010**: System MUST reject manual entries where start time equals or is after end time, since tasks are daily and cannot span midnight.
 
 ## Success Criteria *(mandatory)*
@@ -102,7 +107,7 @@ As a user, I want durations displayed in the same human-friendly format (e.g., `
 ## Assumptions
 
 - Tasks are always within a single calendar day. Manual entries that would span midnight (start time after end time) are rejected.
-- The `--date` option determines which day the start/end times belong to. It defaults to today.
+- The `--date` option determines which day the start/end times belong to. It defaults to today. Accepted values: `YYYY-MM-DD`, `today`, `yesterday`.
 - The 24-hour clock format is used for time input (`HH:MM`). 12-hour AM/PM format is not supported.
 - Duration input is case-insensitive (`1H30M` is equivalent to `1h30m`).
 - This feature modifies the existing time input parsing and duration display formatting. It does not change how time is stored internally.
